@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UNAUTHORIZED ACCESS DETECTED</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #FFB6C1 0%, #FFC0CB 50%, #FFB6C1 100%);
+            color: #DC143C;
+            font-family: 'Courier New', monospace;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Matrix rain background effect */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+        }
+
+        /* Main container */
+        .container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        #terminal {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 4px solid #DC143C;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 
+                0 0 60px rgba(220, 20, 60, 0.6),
+                inset 0 0 30px rgba(255, 182, 193, 0.3);
+            position: relative;
+            animation: terminalGlow 3s infinite alternate;
+        }
+
+        @keyframes terminalGlow {
+            0% { box-shadow: 0 0 60px rgba(220, 20, 60, 0.6), inset 0 0 30px rgba(255, 182, 193, 0.3); }
+            100% { box-shadow: 0 0 80px rgba(220, 20, 60, 0.8), inset 0 0 40px rgba(255, 182, 193, 0.5); }
+        }
+
+        /* Terminal header */
+        .terminal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #DC143C;
+        }
+
+        .terminal-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .terminal-button {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            border: 2px solid #DC143C;
+        }
+
+        .terminal-button.close { background: #FF1493; }
+        .terminal-button.minimize { background: #FFB6C1; }
+        .terminal-button.maximize { background: #DC143C; }
+
+        .terminal-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #DC143C;
+            text-shadow: 2px 2px 4px rgba(220, 20, 60, 0.3);
+        }
+
+        .sound-toggle {
+            background: #DC143C;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .sound-toggle:hover {
+            background: #FF1493;
+            transform: scale(1.05);
+        }
+
+        /* Stages */
+        .stage {
+            display: none;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .stage.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Text styling */
+        .line {
+            margin: 12px 0;
+            font-size: 16px;
+            line-height: 1.8;
+        }
+
+        .typing-line {
+            border-right: 3px solid #DC143C;
+            animation: typing 3s steps(40) 1s forwards, blink 0.75s step-end infinite;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        @keyframes typing {
+            from { width: 0; }
+            to { width: 100%; }
+        }
+
+        @keyframes blink {
+            50% { border-color: transparent; }
+        }
+
+        .emphasis {
+            color: #FF1493;
+            font-weight: bold;
+            text-shadow: 1px 1px 3px rgba(255, 20, 147, 0.5);
+        }
+
+        .glitch {
+            position: relative;
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0); }
+            20% { transform: translate(-3px, 3px); }
+            40% { transform: translate(-3px, -3px); }
+            60% { transform: translate(3px, 3px); }
+            80% { transform: translate(3px, -3px); }
+            100% { transform: translate(0); }
+        }
+
+        /* Progress bar */
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(220, 20, 60, 0.2);
+            border: 3px solid #DC143C;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #DC143C, #FF1493, #FF69B4, #FF1493, #DC143C);
+            background-size: 200% 100%;
+            width: 0%;
+            transition: width 0.1s linear;
+            animation: shimmer 2s linear infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Interactive buttons */
+        .btn {
+            background: linear-gradient(135deg, #DC143C, #FF1493);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 15px 10px;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(220, 20, 60, 0.4);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(220, 20, 60, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(-1px);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Input fields */
+        .input-container {
+            margin: 25px 0;
+        }
+
+        .hack-input {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            background: rgba(255, 182, 193, 0.3);
+            border: 3px solid #DC143C;
+            border-radius: 8px;
+            color: #DC143C;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .hack-input:focus {
+            background: rgba(255, 182, 193, 0.5);
+            box-shadow: 0 0 20px rgba(220, 20, 60, 0.5);
+            transform: scale(1.02);
+        }
+
+        .hack-input::placeholder {
+            color: rgba(220, 20, 60, 0.6);
+        }
+
+        /* Code grid puzzle */
+        .code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 15px;
+            margin: 25px 0;
+        }
+
+        .code-option {
+            padding: 20px;
+            background: rgba(255, 182, 193, 0.4);
+            border: 3px solid #DC143C;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 24px;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .code-option:hover {
+            background: rgba(255, 20, 147, 0.3);
+            transform: scale(1.1);
+            box-shadow: 0 5px 15px rgba(220, 20, 60, 0.5);
+        }
+
+        .code-option.selected {
+            background: #DC143C;
+            color: white;
+            animation: pulse 0.5s;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+
+        /* Hearts animation */
+        .hearts-container {
+            text-align: center;
+            font-size: 40px;
+            margin: 30px 0;
+        }
+
+        .heart {
+            display: inline-block;
+            animation: heartBeat 1.5s infinite;
+            margin: 0 10px;
+        }
+
+        .heart:nth-child(2) { animation-delay: 0.2s; }
+        .heart:nth-child(3) { animation-delay: 0.4s; }
+        .heart:nth-child(4) { animation-delay: 0.6s; }
+        .heart:nth-child(5) { animation-delay: 0.8s; }
+
+        @keyframes heartBeat {
+            0%, 100% { transform: scale(1); }
+            10%, 30% { transform: scale(1.3); }
+            20%, 40% { transform: scale(1.1); }
+        }
+
+        /* ASCII Art */
+        .ascii-art {
+            font-size: 10px;
+            line-height: 1;
+            white-space: pre;
+            text-align: center;
+            color: #FF1493;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+
+        /* Final message styling */
+        .final-message {
+            text-align: center;
+            padding: 30px;
+            background: linear-gradient(135deg, rgba(255, 182, 193, 0.3), rgba(255, 20, 147, 0.2));
+            border: 4px solid #DC143C;
+            border-radius: 15px;
+            margin: 20px 0;
+            animation: finalReveal 1.5s ease-out;
+        }
+
+        @keyframes finalReveal {
+            0% {
+                opacity: 0;
+                transform: scale(0.8) rotateX(90deg);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1) rotateX(0deg);
+            }
+        }
+
+        .final-message h1 {
+            font-size: 32px;
+            margin: 20px 0;
+            color: #DC143C;
+            text-shadow: 3px 3px 6px rgba(220, 20, 60, 0.3);
+        }
+
+        .final-message p {
+            font-size: 18px;
+            line-height: 2;
+            margin: 15px 0;
+        }
+
+        /* Warning box */
+        .warning-box {
+            background: rgba(220, 20, 60, 0.2);
+            border: 3px solid #DC143C;
+            border-left: 10px solid #DC143C;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            animation: warningPulse 2s infinite;
+        }
+
+        @keyframes warningPulse {
+            0%, 100% { border-color: #DC143C; }
+            50% { border-color: #FF1493; }
+        }
+
+        /* Loading spinner */
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 6px solid rgba(220, 20, 60, 0.3);
+            border-top-color: #DC143C;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 30px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #terminal {
+                padding: 20px;
+            }
+
+            .line {
+                font-size: 14px;
+            }
+
+            .btn {
+                padding: 12px 25px;
+                font-size: 16px;
+            }
+
+            .code-grid {
+                grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+                gap: 10px;
+            }
+
+            .code-option {
+                padding: 15px;
+                font-size: 20px;
+            }
+
+            .final-message h1 {
+                font-size: 24px;
+            }
+
+            .final-message p {
+                font-size: 16px;
+            }
+
+            .time-value {
+                font-size: 36px;
+            }
+
+            .time-unit {
+                min-width: 80px;
+                padding: 15px;
+            }
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Success checkmark */
+        .checkmark {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border: 4px solid #00FF00;
+            border-radius: 50%;
+            position: relative;
+            margin: 20px auto;
+            animation: checkmarkPop 0.5s ease-out;
+        }
+
+        @keyframes checkmarkPop {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .checkmark::after {
+            content: '';
+            position: absolute;
+            width: 15px;
+            height: 30px;
+            border: solid #00FF00;
+            border-width: 0 4px 4px 0;
+            top: 8px;
+            left: 20px;
+            transform: rotate(45deg);
+        }
+
+        /* YES Response Animations */
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .celebration-container {
+            position: relative;
+            padding: 30px;
+            animation: celebrationZoom 1s ease-out;
+        }
+
+        @keyframes celebrationZoom {
+            0% { transform: scale(0.5); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .hearts-explosion {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .exploding-heart {
+            font-size: 40px;
+            display: inline-block;
+            animation: explode 2s ease-out infinite;
+        }
+
+        .exploding-heart:nth-child(1) { animation-delay: 0s; }
+        .exploding-heart:nth-child(2) { animation-delay: 0.2s; }
+        .exploding-heart:nth-child(3) { animation-delay: 0.4s; }
+        .exploding-heart:nth-child(4) { animation-delay: 0.6s; }
+        .exploding-heart:nth-child(5) { animation-delay: 0.8s; }
+        .exploding-heart:nth-child(6) { animation-delay: 1s; }
+        .exploding-heart:nth-child(7) { animation-delay: 1.2s; }
+        .exploding-heart:nth-child(8) { animation-delay: 1.4s; }
+
+        @keyframes explode {
+            0% { transform: scale(0) rotate(0deg); opacity: 0; }
+            50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+            100% { transform: scale(1) rotate(360deg); opacity: 1; }
+        }
+
+        .fireworks {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background-image: 
+                radial-gradient(circle, #FF1493 2px, transparent 2px),
+                radial-gradient(circle, #DC143C 2px, transparent 2px),
+                radial-gradient(circle, #FFB6C1 2px, transparent 2px),
+                radial-gradient(circle, #FF69B4 2px, transparent 2px);
+            background-size: 100px 100px, 150px 150px, 120px 120px, 180px 180px;
+            background-position: 0 0, 40px 60px, 80px 20px, 120px 80px;
+            animation: fireworksAnimation 3s linear infinite;
+            opacity: 0.6;
+        }
+
+        @keyframes fireworksAnimation {
+            0% { transform: translateY(0) scale(0); opacity: 0; }
+            50% { transform: translateY(-50px) scale(1); opacity: 0.6; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+
+        /* NO Response Animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px) rotate(-5deg); }
+            75% { transform: translateX(10px) rotate(5deg); }
+        }
+
+        /* Countdown timer */
+        .countdown-container {
+            margin: 40px 0;
+            padding: 30px;
+            background: rgba(255, 182, 193, 0.2);
+            border: 3px solid #FF1493;
+            border-radius: 15px;
+        }
+
+        .countdown-title {
+            font-size: 24px;
+            color: #FF1493;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(255, 20, 147, 0.5);
+        }
+
+        .countdown-timer {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .time-unit {
+            background: linear-gradient(135deg, rgba(255, 182, 193, 0.4), rgba(255, 20, 147, 0.3));
+            border: 3px solid #DC143C;
+            border-radius: 10px;
+            padding: 20px;
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .time-value {
+            font-size: 48px;
+            font-weight: bold;
+            color: #FF1493;
+            text-shadow: 2px 2px 6px rgba(255, 20, 147, 0.5);
+            display: block;
+        }
+
+        .time-label {
+            font-size: 14px;
+            color: #DC143C;
+            text-transform: uppercase;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Matrix rain canvas -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="container">
+        <div id="terminal">
+            <!-- Terminal Header -->
+            <div class="terminal-header">
+                <div class="terminal-buttons">
+                    <div class="terminal-button close"></div>
+                    <div class="terminal-button minimize"></div>
+                    <div class="terminal-button maximize"></div>
+                </div>
+                <div class="terminal-title">SECURE_SYSTEM_v2.14.2026</div>
+                <button class="sound-toggle" id="soundToggle">🔊 SOUND ON</button>
+            </div>
+
+            <!-- Stage 1: Initial Warning -->
+            <div class="stage active" id="stage1">
+                <div class="warning-box">
+                    <div class="line"><span class="glitch">⚠️ UNAUTHORIZED ACCESS DETECTED ⚠️</span></div>
+                    <div class="line">System: VALENTINE_PROTOCOL_2026</div>
+                    <div class="line">Target: <span class="emphasis">Princess Ivy</span></div>
+                    <div class="line">Threat Level: <span class="emphasis">MAXIMUM CUTENESS</span> 💕</div>
+                </div>
+                <div class="line" style="margin-top: 30px;">
+                    Someone is trying to breach your heart's firewall...
+                </div>
+                <div class="line">
+                    This is a <span class="emphasis">ROMANTIC CYBER ATTACK</span> 😏
+                </div>
+                <div class="line" style="margin-top: 20px; font-style: italic; color: #FF1493;">
+                    "Love hacks through even the strongest defenses..." 💕
+                </div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn" onclick="startHack()">
+                        🔓 INITIATE BREACH
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stage 2: Identity Verification -->
+            <div class="stage" id="stage2">
+                <div class="line"><span class="emphasis">&gt;&gt;&gt; SECURITY CHECKPOINT ACTIVATED</span></div>
+                <div class="line">To proceed, you must answer the security question:</div>
+                <div class="line" style="margin-top: 20px; font-size: 18px;">
+                    <span class="emphasis">What is your special couple name?</span>
+                </div>
+                <div class="input-container">
+                    <input 
+                        type="text" 
+                        class="hack-input" 
+                        id="securityAnswer" 
+                        placeholder="Enter the secret code..."
+                        autocomplete="off"
+                    >
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn" onclick="checkSecurity()">
+                        ✓ VERIFY IDENTITY
+                    </button>
+                </div>
+                <div class="line" style="margin-top: 20px; color: #FF1493; font-style: italic;">
+                    Hint: It's a combination of two names that started in August 2019... 💑
+                </div>
+            </div>
+
+            <!-- Stage 3: Accessing Memory Files -->
+            <div class="stage" id="stage3">
+                <div class="line"><span class="emphasis">✓ IDENTITY VERIFIED</span></div>
+                <div class="checkmark"></div>
+                <div class="line" style="margin-top: 20px;">&gt; Accessing memory database...</div>
+                <div class="line">&gt; Scanning relationship files...</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="scanProgress">0%</div>
+                    </div>
+                </div>
+                <div id="memoryFiles" class="hidden">
+                    <div class="line"><span class="emphasis">&gt;&gt; FILES DISCOVERED:</span></div>
+                    <div class="line">📁 first_meeting_august_2019.dat</div>
+                    <div class="line">📁 those_mesmerizing_eyes.jpg ✨</div>
+                    <div class="line">📁 that_perfect_smile.gif 😊</div>
+                    <div class="line">📁 bunda_appreciation_society.file 🍑</div>
+                    <div class="line">📁 adventure_logs_shivy.txt 🗺️</div>
+                    <div class="line">📁 zaa_and_shots_chronicles.log 🌿🥃</div>
+                    <div class="line">📁 tiny_princess_moments.mp4 👸</div>
+                    <div class="line">📁 cupcake_pookie_database.db 💕</div>
+                    <div class="line" style="margin-top: 20px; color: #FF1493;">
+                        ⚠️ WARNING: 4-year separation period detected (2020-2024)
+                    </div>
+                    <div class="line" style="color: #00FF00;">
+                        ✓ SYSTEM RESTORED: 08_MAY_2025 ❤️
+                    </div>
+                    <div class="line" style="margin-top: 20px; font-style: italic; color: #FF69B4;">
+                        "Distance couldn't delete what we had..." 💕
+                    </div>
+                    <div style="text-align: center; margin-top: 30px;">
+                        <button class="btn" onclick="continueToDecryption()">
+                            → CONTINUE HACK
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stage 4: Decryption Puzzle -->
+            <div class="stage" id="stage4">
+                <div class="line"><span class="emphasis">&gt;&gt; ENCRYPTED MESSAGE DETECTED</span></div>
+                <div class="line">A secret Valentine's message has been found...</div>
+                <div class="line">But it's protected by a code! 🔐</div>
+                <div class="line" style="margin-top: 20px;">
+                    <span class="emphasis">Select the correct symbols to decrypt:</span>
+                </div>
+                <div class="line" style="font-size: 14px; color: #FF1493;">
+                    (Hint: Pick the ones that represent love and happiness)
+                </div>
+                <div class="code-grid" id="codeGrid">
+                    <div class="code-option" data-code="heart" onclick="selectCode(this)">❤️</div>
+                    <div class="code-option" data-code="wrong" onclick="selectCode(this)">💀</div>
+                    <div class="code-option" data-code="smile" onclick="selectCode(this)">😊</div>
+                    <div class="code-option" data-code="wrong" onclick="selectCode(this)">🔥</div>
+                    <div class="code-option" data-code="kiss" onclick="selectCode(this)">💋</div>
+                    <div class="code-option" data-code="wrong" onclick="selectCode(this)">⚡</div>
+                    <div class="code-option" data-code="sparkle" onclick="selectCode(this)">✨</div>
+                    <div class="code-option" data-code="wrong" onclick="selectCode(this)">🌙</div>
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button class="btn" onclick="checkDecryption()">
+                        🔓 DECRYPT MESSAGE
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stage 5: Final Decryption -->
+            <div class="stage" id="stage5">
+                <div class="line"><span class="emphasis">🔓 DECRYPTION IN PROGRESS...</span></div>
+                <div class="spinner"></div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="decryptProgress">0%</div>
+                    </div>
+                </div>
+                <div class="line" style="text-align: center; margin-top: 20px; color: #FF1493; font-style: italic;">
+                    "Unlocking the secrets of my heart for you..." 💕✨
+                </div>
+            </div>
+
+            <!-- Stage 6: Final Message -->
+            <div class="stage" id="stage6">
+                <div class="line"><span class="emphasis">✓✓✓ BREACH SUCCESSFUL ✓✓✓</span></div>
+                <div class="hearts-container">
+                    <span class="heart">💕</span>
+                    <span class="heart">❤️</span>
+                    <span class="heart">💖</span>
+                    <span class="heart">💗</span>
+                    <span class="heart">💕</span>
+                </div>
+
+                <div class="ascii-art">
+    ██╗  ██╗ █████╗  ██████╗██╗  ██╗███████╗██████╗ 
+    ██║  ██║██╔══██╗██╔════╝██║ ██╔╝██╔════╝██╔══██╗
+    ███████║███████║██║     █████╔╝ █████╗  ██║  ██║
+    ██╔══██║██╔══██║██║     ██╔═██╗ ██╔══╝  ██║  ██║
+    ██║  ██║██║  ██║╚██████╗██║  ██╗███████╗██████╔╝
+    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝╚══════╝╚═════╝ 
+                </div>
+
+                <div class="final-message">
+                    <h1>🌹 SYSTEM COMPROMISED 🌹</h1>
+                    <p>
+                        Hey <span class="emphasis">Princess Ivy</span>,
+                    </p>
+                    <p>
+                        I just hacked through <span class="emphasis">4 years</span> of separation,<br>
+                        bypassed <span class="emphasis">countless miles</span> of distance,<br>
+                        and cracked <span class="emphasis">every firewall</span> protecting your heart...<br>
+                        All to deliver this message. 💌
+                    </p>
+                    <p style="font-size: 20px; margin: 25px 0;">
+                        Since <span class="emphasis">August 2019</span>, you've been the exploit to my heart's security.<br>
+                        And after we reconnected on <span class="emphasis">May 8th, 2025</span>,<br>
+                        I never want to lose access again. 🔐❤️
+                    </p>
+                    <p>
+                        You're my <span class="emphasis">best friend</span>, my <span class="emphasis">adventure partner</span>,<br>
+                        my <span class="emphasis">zaa & shots companion</span>, my <span class="emphasis">tiny cupcake</span>, my <span class="emphasis">pookie</span>...<br>
+                        The girl with the most mesmerizing eyes ✨<br>
+                        The cutest smile that lights up my world 😊<br>
+                        And yes... <span class="emphasis" style="font-size: 22px;">THAT LEGENDARY BUNDA</span> 🍑🔥
+                    </p>
+                    <div style="margin: 40px 0;">
+                        <div class="ascii-art">
+      ♥♥♥♥♥♥     ♥♥♥♥♥♥
+    ♥♥♥♥♥♥♥♥♥ ♥♥♥♥♥♥♥♥♥
+   ♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥
+   ♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥
+    ♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥
+      ♥♥♥♥♥♥♥♥♥♥♥♥♥♥♥
+        ♥♥♥♥♥♥♥♥♥♥♥
+          ♥♥♥♥♥♥♥
+            ♥♥♥
+                        </div>
+                    </div>
+                    <h1 style="font-size: 36px; color: #FF1493;">
+                        So here's my final hack, Princess:<br><br>
+                        💖 WILL YOU BE MY VALENTINE? 💖
+                    </h1>
+                    <p style="font-size: 16px; margin-top: 30px; font-style: italic;">
+                        (Your heart's terminal is waiting for a response... 😊)
+                    </p>
+                    
+                    <div id="responseButtons" style="margin-top: 40px;">
+                        <button class="btn" onclick="respondYes()" style="font-size: 24px; padding: 20px 50px; margin: 10px;">
+                            💖 YES! 💖
+                        </button>
+                        <button class="btn" onclick="respondNo()" style="font-size: 24px; padding: 20px 50px; margin: 10px; background: linear-gradient(135deg, #888, #666);">
+                            💔 No 💔
+                        </button>
+                    </div>
+
+                    <div id="yesResponse" class="hidden">
+                        <div class="celebration-container">
+                            <div class="fireworks"></div>
+                            <h1 style="font-size: 48px; color: #FF1493; animation: bounce 1s infinite; margin: 30px 0;">
+                                🎉 BEST DAY EVER! 🎉
+                            </h1>
+                            <p style="font-size: 22px; line-height: 2;">
+                                <span class="emphasis">SYSTEM STATUS: HEART SUCCESSFULLY CAPTURED! ❤️</span><br><br>
+                                You just made me the happiest hacker alive! 😍<br>
+                                Can't wait for more adventures, more laughs,<br>
+                                more zaa & shots, and so much more time with you, Princess! 👸💕<br><br>
+                                <span style="font-size: 28px;">This Valentine's Day is officially PERFECT! 🌹</span>
+                            </p>
+                            <div class="hearts-explosion">
+                                <span class="exploding-heart">💖</span>
+                                <span class="exploding-heart">💕</span>
+                                <span class="exploding-heart">❤️</span>
+                                <span class="exploding-heart">💗</span>
+                                <span class="exploding-heart">💘</span>
+                                <span class="exploding-heart">💝</span>
+                                <span class="exploding-heart">💞</span>
+                                <span class="exploding-heart">💓</span>
+                            </div>
+
+                            <!-- Countdown Timer -->
+                            <div class="countdown-container">
+                                <div class="countdown-title">⏰ Time Until Valentine's Day 2026 ⏰</div>
+                                <div class="countdown-timer" id="countdown">
+                                    <div class="time-unit">
+                                        <span class="time-value" id="hours">00</span>
+                                        <span class="time-label">Hours</span>
+                                    </div>
+                                    <div class="time-unit">
+                                        <span class="time-value" id="minutes">00</span>
+                                        <span class="time-label">Minutes</span>
+                                    </div>
+                                    <div class="time-unit">
+                                        <span class="time-value" id="seconds">00</span>
+                                        <span class="time-label">Seconds</span>
+                                    </div>
+                                </div>
+                                <p style="margin-top: 20px; font-size: 18px; color: #FF1493; font-style: italic;">
+                                    Every second with you is a treasure, Cupcake! 💕✨
+                                </p>
+                            </div>
+                        </div>
+                        <p style="margin-top: 40px; font-size: 20px;">
+                            <span class="emphasis">- Your officially confirmed Valentine 💑</span>
+                        </p>
+                    </div>
+
+                    <div id="noResponse" class="hidden">
+                        <h1 style="font-size: 36px; color: #DC143C; margin: 30px 0; animation: shake 0.5s infinite;">
+                            ⚠️ ERROR 404: VALID ANSWER NOT FOUND ⚠️
+                        </h1>
+                        <p style="font-size: 20px; line-height: 2;">
+                            <span class="emphasis">SYSTEM MALFUNCTION DETECTED!</span> 🤖<br><br>
+                            I think there's a bug in the code...<br>
+                            The "No" button shouldn't even exist! 😏<br><br>
+                            Let me fix that for you, Cupcake... 💕<br>
+                            <span style="font-size: 18px; font-style: italic;">
+                                (Try again, you know you want to say yes! 😘)
+                            </span>
+                        </p>
+                        <div style="margin-top: 30px;">
+                            <button class="btn" onclick="tryAgain()" style="font-size: 22px; padding: 18px 45px;">
+                                🔄 TRY AGAIN (Pick YES this time! 😊)
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="initialMessage">
+                        <p style="margin-top: 40px; font-size: 20px;">
+                            <span class="emphasis">- Forever yours, your Shivy partner 💑</span>
+                        </p>
+                        <div class="hearts-container" style="margin-top: 30px;">
+                            <span class="heart">💕</span>
+                            <span class="heart">❤️</span>
+                            <span class="heart">💖</span>
+                            <span class="heart">💗</span>
+                            <span class="heart">💕</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Sound effects (simple beep sounds using Web Audio API)
+        let soundEnabled = true;
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playBeep(frequency = 800, duration = 100) {
+            if (!soundEnabled) return;
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration / 1000);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration / 1000);
+        }
+
+        function playSuccess() {
+            if (!soundEnabled) return;
+            playBeep(600, 100);
+            setTimeout(() => playBeep(800, 100), 100);
+            setTimeout(() => playBeep(1000, 200), 200);
+        }
+
+        function playError() {
+            if (!soundEnabled) return;
+            playBeep(200, 300);
+        }
+
+        // Sound toggle
+        document.getElementById('soundToggle').addEventListener('click', function() {
+            soundEnabled = !soundEnabled;
+            this.textContent = soundEnabled ? '🔊 SOUND ON' : '🔇 SOUND OFF';
+            if (soundEnabled) playBeep(1000, 100);
+        });
+
+        // Matrix rain effect
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const columns = canvas.width / 20;
+        const drops = [];
+        for (let i = 0; i < columns; i++) {
+            drops[i] = Math.random() * canvas.height;
+        }
+
+        const matrixChars = '❤️💕💖💗💘💝💞💓💋😍🥰😘💑👫SHIVY';
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(255, 182, 193, 0.05)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#DC143C';
+            ctx.font = '15px monospace';
+            
+            for (let i = 0; i < drops.length; i++) {
+                const char = matrixChars[Math.floor(Math.random() * matrixChars.length)];
+                ctx.fillText(char, i * 20, drops[i]);
+                
+                if (drops[i] > canvas.height && Math.random() > 0.95) {
+                    drops[i] = 0;
+                }
+                drops[i] += 20;
+            }
+        }
+
+        setInterval(drawMatrix, 50);
+
+        // Resize canvas on window resize
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+
+        // Stage navigation
+        function showStage(stageNum) {
+            document.querySelectorAll('.stage').forEach(stage => {
+                stage.classList.remove('active');
+            });
+            document.getElementById('stage' + stageNum).classList.add('active');
+            playBeep(1000, 50);
+        }
+
+        // Stage 1: Start hack
+        function startHack() {
+            playSuccess();
+            showStage(2);
+        }
+
+        // Stage 2: Security check
+        function checkSecurity() {
+            const answer = document.getElementById('securityAnswer').value.trim().toLowerCase();
+            if (answer === 'shivy') {
+                playSuccess();
+                showStage(3);
+                setTimeout(startScan, 500);
+            } else {
+                playError();
+                alert('❌ ACCESS DENIED! Try again, Princess... 💕');
+                document.getElementById('securityAnswer').value = '';
+            }
+        }
+
+        // Enter key support for security answer
+        document.getElementById('securityAnswer').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                checkSecurity();
+            }
+        });
+
+        // Stage 3: File scanning
+        function startScan() {
+            const progressBar = document.getElementById('scanProgress');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += 2;
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                
+                if (progress % 10 === 0) {
+                    playBeep(800 + progress * 2, 30);
+                }
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        document.getElementById('memoryFiles').classList.remove('hidden');
+                        playSuccess();
+                    }, 500);
+                }
+            }, 50);
+        }
+
+        function continueToDecryption() {
+            playBeep(1200, 100);
+            showStage(4);
+        }
+
+        // Stage 4: Decryption puzzle
+        let selectedCodes = [];
+
+        function selectCode(element) {
+            const code = element.getAttribute('data-code');
+            
+            if (element.classList.contains('selected')) {
+                element.classList.remove('selected');
+                selectedCodes = selectedCodes.filter(c => c !== code);
+            } else {
+                element.classList.add('selected');
+                selectedCodes.push(code);
+                playBeep(1000, 50);
+            }
+        }
+
+        function checkDecryption() {
+            const correctCodes = ['heart', 'smile', 'kiss', 'sparkle'];
+            const hasAllCorrect = correctCodes.every(code => selectedCodes.includes(code));
+            const hasOnlyCorrect = selectedCodes.every(code => correctCodes.includes(code));
+            
+            if (hasAllCorrect && hasOnlyCorrect && selectedCodes.length === 4) {
+                playSuccess();
+                showStage(5);
+                startDecryption();
+            } else {
+                playError();
+                alert('❌ Incorrect code combination! Try again, Cupcake... 💕\n\nHint: You need exactly 4 symbols that represent love!');
+                // Reset selection
+                document.querySelectorAll('.code-option').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                selectedCodes = [];
+            }
+        }
+
+        // Stage 5: Final decryption
+        function startDecryption() {
+            const progressBar = document.getElementById('decryptProgress');
+            let progress = 0;
+            
+            const interval = setInterval(() => {
+                progress += 1;
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = progress + '%';
+                
+                if (progress % 5 === 0) {
+                    playBeep(600 + progress * 4, 40);
+                }
+                
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        playSuccess();
+                        setTimeout(() => {
+                            showStage(6);
+                            playBeep(1200, 200);
+                        }, 500);
+                    }, 800);
+                }
+            }, 30);
+        }
+
+        // Countdown timer
+        function updateCountdown() {
+            const valentinesDay = new Date('February 14, 2026 00:00:00').getTime();
+            const now = new Date().getTime();
+            const distance = valentinesDay - now;
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+
+            if (distance < 0) {
+                document.getElementById('countdown').innerHTML = "<h2 style='color: #FF1493;'>IT'S VALENTINE'S DAY! 💕✨</h2>";
+            }
+        }
+
+        // Initial sound on load
+        window.addEventListener('load', () => {
+            setTimeout(() => playBeep(800, 100), 500);
+        });
+
+        // Response functions for YES/NO buttons
+        function respondYes() {
+            // Hide buttons and initial message
+            document.getElementById('responseButtons').classList.add('hidden');
+            document.getElementById('initialMessage').classList.add('hidden');
+            
+            // Show YES response
+            document.getElementById('yesResponse').classList.remove('hidden');
+            
+            // Start countdown timer
+            updateCountdown();
+            setInterval(updateCountdown, 1000);
+            
+            // Play celebration sounds
+            playSuccess();
+            setTimeout(() => playBeep(1200, 150), 300);
+            setTimeout(() => playBeep(1400, 150), 600);
+            setTimeout(() => playBeep(1600, 200), 900);
+            
+            // More celebratory beeps
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    playBeep(800 + Math.random() * 800, 100);
+                }, 1200 + i * 200);
+            }
+        }
+
+        function respondNo() {
+            // Hide buttons and initial message
+            document.getElementById('responseButtons').classList.add('hidden');
+            document.getElementById('initialMessage').classList.add('hidden');
+            
+            // Show NO response
+            document.getElementById('noResponse').classList.remove('hidden');
+            
+            // Play error sound
+            playError();
+            setTimeout(() => playError(), 400);
+        }
+
+        function tryAgain() {
+            // Hide NO response
+            document.getElementById('noResponse').classList.add('hidden');
+            
+            // Show buttons again
+            document.getElementById('responseButtons').classList.remove('hidden');
+            document.getElementById('initialMessage').classList.remove('hidden');
+            
+            // Play encouraging beep
+            playBeep(1000, 100);
+        }
+    </script>
+</body>
+</html>
